@@ -7,11 +7,20 @@
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
+  <div class="bg-glow" aria-hidden="true"></div>
+
   <header class="topbar">
     <div class="brand">
-      <span class="logo">◧</span>
-      <span class="title">SAM_SAG</span>
-      <span class="subtitle">视觉质检上位机</span>
+      <span class="logo" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M4 8V5.5A1.5 1.5 0 0 1 5.5 4H8M16 4h2.5A1.5 1.5 0 0 1 20 5.5V8M20 16v2.5a1.5 1.5 0 0 1-1.5 1.5H16M8 20H5.5A1.5 1.5 0 0 1 4 18.5V16"/>
+          <circle cx="12" cy="12" r="3.2"/>
+        </svg>
+      </span>
+      <div class="brand-text">
+        <span class="title">SAM_SAG</span>
+        <span class="subtitle">视觉质检上位机 · Visual QC Station</span>
+      </div>
     </div>
     <div class="engine-badges" id="engineBadges">
       <span class="badge" id="badgeYolo">YOLO · 检测中…</span>
@@ -21,28 +30,46 @@
   </header>
 
   <main class="layout">
-    <!-- 左侧: 控制面板 -->
+    <!-- 左: 控制台 -->
     <aside class="panel control-panel">
+      <div class="panel-head">
+        <h2>控制台 · 检测流程</h2>
+      </div>
+
       <section class="block">
-        <h2>① 上传图片</h2>
-        <div id="dropzone" class="dropzone" tabindex="0">
+        <h3><span class="step">1</span>上传图片</h3>
+        <div id="dropzone" class="dropzone" tabindex="0" role="button" aria-label="上传图片">
+          <span class="dz-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 16V4m0 0L8 8m4-4 4 4"/>
+              <path d="M4 15v3.5A1.5 1.5 0 0 0 5.5 20h13a1.5 1.5 0 0 0 1.5-1.5V15"/>
+            </svg>
+          </span>
           <p class="dz-main">拖拽图片到这里</p>
-          <p class="dz-sub">或点击选择文件(jpg / png / bmp / webp)</p>
+          <p class="dz-sub">或点击选择 · jpg / png / bmp / webp</p>
           <p class="dz-file" id="dzFile"></p>
         </div>
         <input type="file" id="fileInput" accept="image/*" hidden />
       </section>
 
       <section class="block">
-        <h2>② 选择模式</h2>
-        <label class="radio">
-          <input type="radio" name="mode" value="detect" checked />
-          <span>目标检测(YOLO)</span>
-        </label>
-        <label class="radio">
-          <input type="radio" name="mode" value="inspect" />
-          <span>瑕疵检测(anomalib)</span>
-        </label>
+        <h3><span class="step">2</span>检测模式</h3>
+        <div class="mode-group">
+          <label class="radio">
+            <input type="radio" name="mode" value="detect" checked />
+            <span class="radio-body">
+              <b>目标检测</b>
+              <i>YOLO · 识别物品并画框</i>
+            </span>
+          </label>
+          <label class="radio">
+            <input type="radio" name="mode" value="inspect" />
+            <span class="radio-body">
+              <b>瑕疵检测</b>
+              <i>anomalib · 异常定位与热力图</i>
+            </span>
+          </label>
+        </div>
 
         <div id="categoryRow" class="field hidden">
           <label for="categorySelect">瑕疵类别模型</label>
@@ -51,7 +78,7 @@
       </section>
 
       <section class="block">
-        <h2>③ 阈值</h2>
+        <h3><span class="step">3</span>阈值</h3>
         <div id="confRow" class="field">
           <label>置信度阈值 <b id="confVal">0.25</b></label>
           <input type="range" id="confSlider" min="0.05" max="0.95" step="0.05" value="0.25" />
@@ -62,31 +89,42 @@
         </div>
       </section>
 
-      <button id="runBtn" class="run-btn" disabled>开始检测</button>
-      <div id="statusBar" class="status-bar"></div>
+      <div class="run-wrap">
+        <button id="runBtn" class="run-btn" disabled>开始检测</button>
+        <div id="statusBar" class="status-bar"></div>
+      </div>
     </aside>
 
-    <!-- 中间: 画布与判定 -->
+    <!-- 中: 画布与判定 -->
     <section class="panel stage-panel">
       <div class="verdict-row">
         <div id="verdict" class="verdict verdict-idle">等待检测</div>
         <div id="metaBox" class="meta-box"></div>
       </div>
       <div id="viewRow" class="view-row hidden">
-        <span>视图:</span>
-        <label class="radio"><input type="radio" name="view" value="overlay" checked /><span>叠加图</span></label>
-        <label class="radio"><input type="radio" name="view" value="heatmap" /><span>热力图</span></label>
-        <label class="radio"><input type="radio" name="view" value="original" /><span>原图</span></label>
+        <span class="view-label">视图</span>
+        <label class="radio pill"><input type="radio" name="view" value="overlay" checked /><span>叠加图</span></label>
+        <label class="radio pill"><input type="radio" name="view" value="heatmap" /><span>热力图</span></label>
+        <label class="radio pill"><input type="radio" name="view" value="original" /><span>原图</span></label>
       </div>
       <div class="canvas-wrap">
         <canvas id="stage"></canvas>
-        <div id="emptyHint" class="empty-hint">上传图片并选择模式后, 结果将显示在这里</div>
+        <div id="emptyHint" class="empty-hint">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="3" y="4" width="18" height="16" rx="2.5"/>
+            <circle cx="8.5" cy="9.5" r="1.6"/>
+            <path d="M4 17l4.5-4.5 3.5 3.5 3-3L20 16"/>
+          </svg>
+          <p>上传图片并选择模式后，结果将显示在这里</p>
+        </div>
       </div>
     </section>
 
-    <!-- 右侧: 历史记录 -->
+    <!-- 右: 历史 -->
     <aside class="panel history-panel">
-      <h2>历史记录</h2>
+      <div class="panel-head">
+        <h2>历史记录</h2>
+      </div>
       <div id="historyList" class="history-list"></div>
       <button id="clearHistory" class="ghost-btn">清空历史</button>
     </aside>
