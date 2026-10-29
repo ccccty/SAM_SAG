@@ -1,0 +1,23 @@
+# SAM_SAG 依赖清单
+# 注意: torch / torchvision 请先按 README 选择 CUDA 或 CPU 源单独安装, 这里只声明下限版本。
+torch>=2.2
+torchvision>=0.17
+
+# 目标检测
+ultralytics>=8.3
+
+# 无监督瑕疵检测(会自动带入 lightning / timm 等依赖)
+anomalib>=1.1
+
+# Web 服务
+fastapi>=0.110
+uvicorn[standard]>=0.29
+python-multipart>=0.0.9
+
+# 图像与数值处理
+numpy>=1.26
+pillow>=10.0
+opencv-python-headless>=4.8
+
+# 冒烟测试脚本
+requests>=2.31

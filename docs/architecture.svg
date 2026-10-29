@@ -1,0 +1,51 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="920" height="340" viewBox="0 0 920 340" font-family="Microsoft YaHei, Segoe UI, sans-serif">
+  <rect width="920" height="340" fill="#161c26" rx="10"/>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#f5a623"/>
+    </marker>
+  </defs>
+
+  <!-- 前端 -->
+  <rect x="30" y="110" width="180" height="120" rx="10" fill="#1c2431" stroke="#f5a623" stroke-width="2"/>
+  <text x="120" y="160" text-anchor="middle" fill="#d7dee8" font-size="18" font-weight="bold">浏览器前端</text>
+  <text x="120" y="188" text-anchor="middle" fill="#8a94a6" font-size="12">原生 JS 单页 · Canvas</text>
+  <text x="120" y="206" text-anchor="middle" fill="#8a94a6" font-size="12">离线可用 · localStorage 历史</text>
+
+  <!-- 后端 -->
+  <rect x="290" y="110" width="180" height="120" rx="10" fill="#1c2431" stroke="#f5a623" stroke-width="2"/>
+  <text x="380" y="155" text-anchor="middle" fill="#d7dee8" font-size="18" font-weight="bold">FastAPI 后端</text>
+  <text x="380" y="183" text-anchor="middle" fill="#8a94a6" font-size="12">/api/detect · /api/inspect</text>
+  <text x="380" y="201" text-anchor="middle" fill="#8a94a6" font-size="12">/api/models · /api/train</text>
+
+  <!-- 引擎组 -->
+  <rect x="550" y="40" width="160" height="70" rx="10" fill="#1c2431" stroke="#29b6f6" stroke-width="2"/>
+  <text x="630" y="68" text-anchor="middle" fill="#d7dee8" font-size="15" font-weight="bold">YOLO 检测引擎</text>
+  <text x="630" y="92" text-anchor="middle" fill="#8a94a6" font-size="11">weights/yolo11n.pt</text>
+
+  <rect x="550" y="140" width="180" height="70" rx="10" fill="#1c2431" stroke="#29b6f6" stroke-width="2"/>
+  <text x="630" y="168" text-anchor="middle" fill="#d7dee8" font-size="15" font-weight="bold">anomalib 瑕疵引擎</text>
+  <text x="630" y="192" text-anchor="middle" fill="#8a94a6" font-size="11">weights/anomalib/&lt;类别&gt;/*.ckpt</text>
+
+  <rect x="550" y="240" width="160" height="70" rx="10" fill="#1c2431" stroke="#5a6b82" stroke-width="2" stroke-dasharray="6 4"/>
+  <text x="630" y="268" text-anchor="middle" fill="#8a94a6" font-size="15" font-weight="bold">SAM3 插件(预留)</text>
+  <text x="630" y="292" text-anchor="middle" fill="#8a94a6" font-size="11">weights/sam3/</text>
+
+  <!-- 结果 -->
+  <rect x="780" y="110" width="120" height="120" rx="10" fill="#1c2431" stroke="#00c853" stroke-width="2"/>
+  <text x="840" y="160" text-anchor="middle" fill="#d7dee8" font-size="16" font-weight="bold">质检结果</text>
+  <text x="840" y="186" text-anchor="middle" fill="#8a94a6" font-size="11">检测框 / 热力图</text>
+  <text x="840" y="204" text-anchor="middle" fill="#8a94a6" font-size="11">OK · NG 判定</text>
+
+  <!-- 连线 -->
+  <line x1="210" y1="170" x2="282" y2="170" stroke="#f5a623" stroke-width="2" marker-end="url(#arrow)"/>
+  <line x1="470" y1="150" x2="542" y2="80" stroke="#f5a623" stroke-width="2" marker-end="url(#arrow)"/>
+  <line x1="470" y1="170" x2="542" y2="175" stroke="#f5a623" stroke-width="2" marker-end="url(#arrow)"/>
+  <line x1="470" y1="190" x2="542" y2="270" stroke="#f5a623" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#arrow)"/>
+  <line x1="710" y1="75" x2="772" y2="150" stroke="#00c853" stroke-width="2" marker-end="url(#arrow)"/>
+  <line x1="710" y1="175" x2="772" y2="170" stroke="#00c853" stroke-width="2" marker-end="url(#arrow)"/>
+  <line x1="710" y1="275" x2="772" y2="195" stroke="#5a6b82" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#arrow)"/>
+
+  <!-- 标题 -->
+  <text x="30" y="30" fill="#8a94a6" font-size="13">SAM_SAG 数据流: 上传图片 → 路由分发 → 引擎推理 → 统一 JSON 契约回传</text>
+</svg>

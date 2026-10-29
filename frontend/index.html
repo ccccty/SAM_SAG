@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SAM_SAG · 视觉质检上位机</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <span class="logo">◧</span>
+      <span class="title">SAM_SAG</span>
+      <span class="subtitle">视觉质检上位机</span>
+    </div>
+    <div class="engine-badges" id="engineBadges">
+      <span class="badge" id="badgeYolo">YOLO · 检测中…</span>
+      <span class="badge" id="badgeAnomalib">anomalib · 检测中…</span>
+      <span class="badge" id="badgeSam3">SAM3 · 检测中…</span>
+    </div>
+  </header>
+
+  <main class="layout">
+    <!-- 左侧: 控制面板 -->
+    <aside class="panel control-panel">
+      <section class="block">
+        <h2>① 上传图片</h2>
+        <div id="dropzone" class="dropzone" tabindex="0">
+          <p class="dz-main">拖拽图片到这里</p>
+          <p class="dz-sub">或点击选择文件(jpg / png / bmp / webp)</p>
+          <p class="dz-file" id="dzFile"></p>
+        </div>
+        <input type="file" id="fileInput" accept="image/*" hidden />
+      </section>
+
+      <section class="block">
+        <h2>② 选择模式</h2>
+        <label class="radio">
+          <input type="radio" name="mode" value="detect" checked />
+          <span>目标检测(YOLO)</span>
+        </label>
+        <label class="radio">
+          <input type="radio" name="mode" value="inspect" />
+          <span>瑕疵检测(anomalib)</span>
+        </label>
+
+        <div id="categoryRow" class="field hidden">
+          <label for="categorySelect">瑕疵类别模型</label>
+          <select id="categorySelect"></select>
+        </div>
+      </section>
+
+      <section class="block">
+        <h2>③ 阈值</h2>
+        <div id="confRow" class="field">
+          <label>置信度阈值 <b id="confVal">0.25</b></label>
+          <input type="range" id="confSlider" min="0.05" max="0.95" step="0.05" value="0.25" />
+        </div>
+        <div id="threshRow" class="field hidden">
+          <label>异常阈值 <b id="threshVal">0.50</b></label>
+          <input type="range" id="threshSlider" min="0.05" max="0.95" step="0.01" value="0.50" />
+        </div>
+      </section>
+
+      <button id="runBtn" class="run-btn" disabled>开始检测</button>
+      <div id="statusBar" class="status-bar"></div>
+    </aside>
+
+    <!-- 中间: 画布与判定 -->
+    <section class="panel stage-panel">
+      <div class="verdict-row">
+        <div id="verdict" class="verdict verdict-idle">等待检测</div>
+        <div id="metaBox" class="meta-box"></div>
+      </div>
+      <div id="viewRow" class="view-row hidden">
+        <span>视图:</span>
+        <label class="radio"><input type="radio" name="view" value="overlay" checked /><span>叠加图</span></label>
+        <label class="radio"><input type="radio" name="view" value="heatmap" /><span>热力图</span></label>
+        <label class="radio"><input type="radio" name="view" value="original" /><span>原图</span></label>
+      </div>
+      <div class="canvas-wrap">
+        <canvas id="stage"></canvas>
+        <div id="emptyHint" class="empty-hint">上传图片并选择模式后, 结果将显示在这里</div>
+      </div>
+    </section>
+
+    <!-- 右侧: 历史记录 -->
+    <aside class="panel history-panel">
+      <h2>历史记录</h2>
+      <div id="historyList" class="history-list"></div>
+      <button id="clearHistory" class="ghost-btn">清空历史</button>
+    </aside>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>
