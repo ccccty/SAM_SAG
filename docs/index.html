@@ -42,8 +42,8 @@
         <p>基于 anomalib(EfficientAD / PatchCore)。只需正常样本即可训练,输出异常分数、JET 热力图叠加与 OK/NG 判定,阈值可调。</p>
       </div>
       <div class="card">
-        <h3>🧩 SAM3 插件(预留)</h3>
-        <p>预留文本提示分割接口。权重放入 <code>weights/sam3/</code> 即被自动识别,推理链路随 SAM3 官方发布接入。</p>
+        <h3>🎯 SAM3 文本分割</h3>
+        <p>输入概念词(如 <code>screw,scratch</code>)即输出实例级掩码与叠加图。基于 Meta SAM 3 <code>sam3.1</code> fp16(1.6GB),CUDA 上单图约 0.6–1.1 s。</p>
       </div>
     </div>
   </section>

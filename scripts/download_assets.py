@@ -4,10 +4,12 @@
     python scripts/download_assets.py            # 只打印全部指引
     python scripts/download_assets.py --yolo     # 自动下载 yolo11n.pt
     python scripts/download_assets.py --mvtec    # 打印 MVTec AD 数据集获取指引
+    python scripts/download_assets.py --sam3     # 自动下载 SAM3 权重(约 1.6GB)
 
 说明:
 - anomalib 瑕疵模型需要按类别自行训练(见 training/train_anomalib.py), 无官方成品分发;
-- SAM3 权重待官方发布, 本脚本打印放置指引即可。
+- SAM3 官方仓库(facebook/sam3)为 gated, 需在 Hugging Face 手动同意许可;
+  本脚本走非 gated 的社区镜像, 无需 token。
 """
 
 from __future__ import annotations
@@ -40,12 +42,35 @@ MVTec AD 数据集获取指引
        python training/train_anomalib.py --category <category>
 """
 
-SAM3_GUIDE = """
-SAM3(可选插件)放置指引
+# SAM3 权重来源: unsloth/sam3.1(非 gated 社区镜像, 与 facebook/sam3.1 同权重)
+# 官方 facebook/sam3 与 facebook/sam3.1 均为 gated=manual, 需要网页上手动同意许可,
+# 因此这里默认走免 token 的镜像; 已有官方权重者可跳过本步骤。
+SAM3_REPO = "unsloth/sam3.1"
+SAM3_REPO_TYPE = "model"
+SAM3_BASE = f"https://huggingface.co/{SAM3_REPO}/resolve/main"
+SAM3_DIR = WEIGHTS_DIR / "sam3"
+SAM3_FILES = (
+    "model.safetensors",        # 约 1.6GB fp16
+    "config.json",
+    "processor_config.json",
+    "tokenizer.json",
+    "tokenizer_config.json",
+    "vocab.json",
+    "merges.txt",
+    "special_tokens_map.json",
+)
+
+SAM3_GUIDE = f"""
+SAM3(可选)权重获取指引
 =========================
-SAM3 为预留的文本提示分割能力, 当前不影响主功能。
-官方权重发布后, 放入 weights/sam3/ 目录即可被后端自动识别
-(状态见 /api/models → sam3)。推理接入点: backend/core/sam3_plugin.py。
+来源: {SAM3_REPO}(非 gated 社区镜像, 无需 token)
+目标: {SAM3_DIR}
+方式一(推荐, 自动):
+    python scripts/download_assets.py --sam3
+方式二(手动): 逐个下载以下文件到 {SAM3_DIR}
+""" + "".join(f"    {SAM3_BASE}/{name}\n" for name in SAM3_FILES) + """
+放好后重启后端, /api/models → sam3.available 会变为 true;
+推理入口: backend/core/sam3_plugin.py, 接口 POST /api/segment。
 """
 
 
@@ -81,6 +106,7 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="SAM_SAG 权重与数据集下载引导")
     parser.add_argument("--yolo", action="store_true", help="自动下载 yolo11n.pt")
     parser.add_argument("--mvtec", action="store_true", help="打印 MVTec AD 获取指引")
+    parser.add_argument("--sam3", action="store_true", help="自动下载 SAM3 权重(约 1.6GB)")
     args = parser.parse_args()
 
     ok = True
@@ -95,13 +121,25 @@ def main() -> int:
         print(f"          (或手动下载 {YOLO_URL})")
         print()
 
+    if args.sam3:
+        print(f"SAM3 权重下载自 {SAM3_REPO}(非 gated 镜像, 约 1.6GB)")
+        for name in SAM3_FILES:
+            target = SAM3_DIR / name
+            if target.is_file() and target.stat().st_size > 0:
+                print(f"[跳过] 已存在: {name} ({target.stat().st_size // 1024 // 1024}MB)")
+                continue
+            ok = download(f"{SAM3_BASE}/{name}", target) and ok
+        print(f"\n完成。状态检查: GET /api/models → sam3.available")
+    else:
+        print(SAM3_GUIDE)
+        print()
+
     if args.mvtec:
         print(MVTEC_GUIDE)
-    elif not args.yolo:
+    elif not args.yolo and not args.sam3:
         print(MVTEC_GUIDE)
 
-    if not args.yolo and not args.mvtec:
-        print(SAM3_GUIDE)
+    if not args.yolo and not args.mvtec and not args.sam3:
         print("anomalib 瑕疵模型: 无官方成品, 请用 training/train_anomalib.py 自行训练。")
 
     return 0 if ok else 1

@@ -45,6 +45,8 @@ APP_TITLE = "SAM_SAG 视觉质检上位机"
 # ---------------------------------------------------------------------------
 DEFAULT_CONF_THRESHOLD = 0.25      # YOLO 置信度阈值
 DEFAULT_ANOMALY_THRESHOLD = 0.5    # anomalib 异常分数阈值(0~1, 越大越严格)
+SAM3_DEFAULT_THRESHOLD = 0.30      # SAM3 实例分数阈值(契约范围 0.05~0.95)
+SAM3_DEFAULT_MASK_THRESHOLD = 0.50 # SAM3 mask 二值化阈值
 MAX_UPLOAD_MB = 20                 # 上传图片大小上限
 ALLOWED_IMAGE_SUFFIXES = {".jpg", ".jpeg", ".png", ".bmp", ".webp", ".tif", ".tiff"}
 

@@ -7,7 +7,7 @@ SAM_SAG 是一套开箱即用的工业视觉质检上位机:上传一张图片,�
 
 - **目标检测** —— 基于 [Ultralytics YOLO](https://github.com/ultralytics/ultralytics),画框 + 标签 + 置信度;
 - **无监督瑕疵检测** —— 基于 [anomalib](https://github.com/open-edge-platform/anomalib),输出异常分数、缺陷热力图叠加与 **OK/NG** 判定;
-- **SAM3 文本分割(预留插件)** —— 已预留 `weights/sam3/` 接口与调用签名,检测到模型文件后自动开放。
+- **SAM3 文本提示分割** —— 输入概念词(如 `screw,scratch`)即输出实例级掩码 + 叠加图,基于 Meta [SAM 3](https://github.com/facebookresearch/sam3)(`sam3.1` fp16, 1.6GB)。
 
 前端为纯原生 HTML/JS 单页(无任何 CDN 依赖,离线可用),后端为 FastAPI,支持一键启动与后台训练任务。
 
@@ -54,6 +54,11 @@ SAM_SAG 是一套开箱即用的工业视觉质检上位机:上传一张图片,�
 - Python **3.11+**
 - NVIDIA GPU + CUDA 可选(无 GPU 时自动回落 CPU,速度变慢但功能完整)
 
+> **SAM3 与 torch 版本的坑**:transformers 从 **5.20 起硬性要求 `torch>=2.6`**,而 CUDA 12.1 对应的稳定版 torch 仍是 2.5.1。
+> 装 5.20+ 会让 transformers 直接判定"环境里没有 PyTorch"并拒绝加载 SAM3。
+> 因此 `requirements.txt` 锁 `transformers>=5.10,<5.20` —— 5.10 已包含 `Sam3Model`/`Sam3Processor`,且只需 `torch>=2.4`。
+> 如果你已经升级了 torch 到 2.6+,可以自由放开这个上限。
+
 ### 安装
 
 ```bat
@@ -68,7 +73,7 @@ pip install torch torchvision --index-url https://download.pytorch.org/whl/cu121
 ::    无 N 卡则用 CPU 版:
 ::    pip install torch torchvision
 
-:: 2) 安装其余依赖
+:: 2) 安装其余依赖(已包含 transformers>=5.10,<5.20, 用于 SAM3)
 pip install -r requirements.txt
 
 :: 3) 下载 YOLO 权重 + 查看数据集/模型放置指引
@@ -97,7 +102,7 @@ python -m backend.main
 | --- | --- | --- |
 | YOLO 检测权重 | `weights/yolo11n.pt` | `python scripts/download_assets.py --yolo` 自动下载 |
 | anomalib 瑕疵模型 | `weights/anomalib/<类别>/*.ckpt` | 用 `training/train_anomalib.py` 自行训练(见下) |
-| SAM3 权重(可选) | `weights/sam3/` | 待 SAM3 官方发布后按 `weights/README.md` 放置 |
+| SAM3 权重(可选) | `weights/sam3/` | `python scripts/download_assets.py --sam3`,或手动放入 `model.safetensors` + `config.json` + tokenizer 系列 |
 | MVTec AD 数据集 | `data/mvtec/<类别>/{train,test}/` | 官方申请(见 `scripts/download_assets.py --mvtec` 指引) |
 
 ### 训练自己的瑕疵检测模型
@@ -150,6 +155,7 @@ SAM_SAG/
 | GET | `/api/models` | 各引擎可用状态(YOLO / anomalib 各类别 / SAM3) |
 | POST | `/api/detect` | 上传图片 → YOLO 检测框 |
 | POST | `/api/inspect` | 上传图片 + `category` → 异常分数 / 热力图 / OK/NG |
+| POST | `/api/segment` | 上传图片 + `text`(逗号分隔概念词) → 实例掩码 / 叠加图 / 分数 |
 | POST | `/api/train` | 启动后台训练任务 |
 | GET | `/api/train/{task_id}` | 查询训练任务状态 |
 
@@ -161,7 +167,8 @@ SAM_SAG/
 
 - [anomalib](https://github.com/open-edge-platform/anomalib) —— 无监督异常检测算法库(EfficientAD / PatchCore 等)
 - [Ultralytics YOLO](https://github.com/ultralytics/ultralytics) —— 目标检测训练与推理
-- [SAM3 (Segment Anything 3)](https://github.com/facebookresearch/segment-anything) —— 文本提示分割(预留接口)
+- [SAM 3 (Segment Anything 3)](https://github.com/facebookresearch/sam3) —— 文本提示实例分割
+- [Transformers](https://github.com/huggingface/transformers) —— SAM3 推理运行时(版本需锁 5.10.x)
 
 ## License
 

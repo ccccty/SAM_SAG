@@ -707,3 +707,116 @@ input[type="range"]:focus-visible { outline: 2px solid rgba(56, 217, 240, 0.55);
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
 }
+
+/* =====================================================================
+   SECTION: SAM3 文本提示分割 (segment 模式)
+   追加于文件末尾, 只复用上方设计令牌与既有组件(.field/.radio/.pill/
+   input[type=range]), 不覆盖任何既有规则。
+   ===================================================================== */
+
+/* ---------- 文本提示输入 (.field 内的单行输入) ---------- */
+.prompt-input {
+  width: 100%;
+  padding: 9px 11px;
+  font-family: var(--mono);
+  font-size: 12.5px;
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.035);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-sm);
+  transition: border-color 0.18s, background 0.18s, box-shadow 0.18s;
+}
+.prompt-input::placeholder { color: var(--text-faint); }
+.prompt-input:hover { border-color: rgba(56, 217, 240, 0.45); }
+.prompt-input:focus-visible {
+  outline: none;
+  border-color: var(--accent);
+  background: rgba(56, 217, 240, 0.05);
+  box-shadow: 0 0 0 3px rgba(56, 217, 240, 0.16);
+}
+
+/* ---------- 字段提示文案 ---------- */
+.field-hint {
+  margin: 8px 0 0;
+  font-size: 10.5px;
+  line-height: 1.5;
+  color: var(--text-faint);
+  letter-spacing: 0.01em;
+}
+.field-hint:empty { display: none; }
+
+/* ---------- 实例清单 (maskRow) ---------- */
+.mask-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: -4px 0 14px;
+}
+
+.mask-row .mask-label {
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+  margin-right: 2px;
+}
+
+.mask-chip {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 7px;
+  padding: 4px 11px;
+  font-size: 11.5px;
+  color: var(--text-dim);
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  font-variant-numeric: tabular-nums;
+  transition: border-color 0.16s, background 0.16s;
+  animation: fadeIn 0.24s ease-out;
+}
+.mask-chip:hover {
+  border-color: rgba(56, 217, 240, 0.42);
+  background: rgba(56, 217, 240, 0.07);
+}
+
+.mask-chip .idx {
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--accent);
+  padding: 0 5px;
+  background: rgba(56, 217, 240, 0.12);
+  border: 1px solid rgba(56, 217, 240, 0.24);
+  border-radius: 5px;
+}
+
+.mask-chip .name {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.mask-chip .score {
+  font-family: var(--mono);
+  font-weight: 600;
+  color: var(--accent);
+}
+
+.mask-chip .area {
+  font-family: var(--mono);
+  font-size: 10.5px;
+  color: var(--text-faint);
+}
+
+.mask-row .mask-empty {
+  font-size: 11.5px;
+  color: var(--text-faint);
+}
+
+/* ---------- segment 模式: 移动端收窄 ---------- */
+@media (max-width: 860px) {
+  .mask-row { margin-bottom: 12px; }
+  .mask-chip { padding: 3px 9px; }
+}

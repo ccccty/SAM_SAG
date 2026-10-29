@@ -9,6 +9,10 @@ ultralytics>=8.3
 # 无监督瑕疵检测(会自动带入 lightning / timm 等依赖)
 anomalib>=1.1
 
+# SAM3 文本提示分割(可选插件): 5.10 是最后一个仍兼容 torch>=2.4 的版本,
+# 5.20+ 硬性要求 torch>=2.6, 与本机 torch 2.5.1+cu121 冲突, 不要盲目升级。
+transformers>=5.10,<5.20
+
 # Web 服务
 fastapi>=0.110
 uvicorn[standard]>=0.29

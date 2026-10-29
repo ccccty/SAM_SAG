@@ -5,6 +5,9 @@
  *   POST /api/detect   → {ok, detections:[{label,confidence,box:[x1,y1,x2,y2]}], inference_ms}
  *   POST /api/inspect  → {ok, category, score, is_ng, threshold,
  *                         heatmap_png_base64, overlay_png_base64, inference_ms}
+ *   POST /api/segment  → {ok, result:{concepts, model, device, inference_ms, image_size,
+ *                         instances:[{concept,score,box,area_px,area_ratio,mask_png_base64}],
+ *                         mask_png_base64, overlay_png_base64}}
  *   错误统一 {ok:false, error:{code,message}}
  */
 (function () {
@@ -19,7 +22,7 @@
   var state = {
     file: null,          // 当前上传的 File
     dataURL: null,       // 原图 dataURL(画布绘制用)
-    mode: 'detect',      // detect | inspect
+    mode: 'detect',      // detect | inspect | segment
     models: null,        // /api/models 返回
     lastResult: null,    // 最近一次推理结果(渲染/切视图用)
   };
@@ -41,6 +44,12 @@
     threshRow: $('threshRow'),
     threshSlider: $('threshSlider'),
     threshVal: $('threshVal'),
+    promptRow: $('promptRow'),
+    promptInput: $('promptInput'),
+    segThresholdRow: $('segThresholdRow'),
+    segThresholdSlider: $('segThresholdSlider'),
+    segThresholdVal: $('segThresholdVal'),
+    maskRow: $('maskRow'),
     runBtn: $('runBtn'),
     statusBar: $('statusBar'),
     verdict: $('verdict'),
@@ -73,6 +82,29 @@
   function setVerdict(text, kind) {
     els.verdict.textContent = text;
     els.verdict.className = 'verdict verdict-' + kind;
+  }
+
+  // 视图值 → 胶囊 class; segment 只给 mask/overlay, inspect 保持 overlay/heatmap/original
+  var VIEW_INSPECT = ['overlay', 'heatmap', 'original'];
+  var VIEW_SEGMENT = ['mask', 'overlay'];
+
+  function checkedView() {
+    var el = document.querySelector('input[name="view"]:checked');
+    return el ? el.value : 'overlay';
+  }
+
+  function setView(value) {
+    var el = els.viewRow.querySelector('input[name="view"][value="' + value + '"]');
+    if (el) { el.checked = true; }
+  }
+
+  function syncViewPills(mode) {
+    var allowed = mode === 'segment' ? VIEW_SEGMENT : VIEW_INSPECT;
+    VIEW_INSPECT.concat('mask').forEach(function (v) {
+      var pill = els.viewRow.querySelector('.view-' + v);
+      if (pill) { pill.classList.toggle('hidden', allowed.indexOf(v) < 0); }
+    });
+    if (allowed.indexOf(checkedView()) < 0) { setView('overlay'); }
   }
 
   function loadImage(src) {
@@ -115,6 +147,13 @@
         setBadge(els.badgeAnomalib, 'Anomalib', json.models.anomalib.available, json.models.anomalib.message);
         setBadge(els.badgeSam3, 'Sam3', json.models.sam3.available, json.models.sam3.message);
 
+        // SAM3 概念候选提示(可选字段, 缺失时保留 HTML 默认文案)
+        var sam3 = json.models.sam3 || {};
+        var hintEl = els.promptRow.querySelector('.field-hint');
+        if (hintEl && sam3.concepts_hint && sam3.concepts_hint.length) {
+          hintEl.textContent = '概念候选: ' + sam3.concepts_hint.join(' / ');
+        }
+
         // 瑕疵类别下拉
         var cats = json.models.anomalib.categories || [];
         els.categorySelect.innerHTML = '';
@@ -144,20 +183,44 @@
   function setMode(mode) {
     state.mode = mode;
     var isInspect = mode === 'inspect';
+    var isSegment = mode === 'segment';
     els.categoryRow.classList.toggle('hidden', !isInspect);
     els.threshRow.classList.toggle('hidden', !isInspect);
-    els.confRow.classList.toggle('hidden', isInspect);
+    els.promptRow.classList.toggle('hidden', !isSegment);
+    els.segThresholdRow.classList.toggle('hidden', !isSegment);
+    els.confRow.classList.toggle('hidden', mode !== 'detect');
     els.viewRow.classList.add('hidden');
+    els.maskRow.classList.add('hidden');
+    els.maskRow.innerHTML = '';
+    syncViewPills(mode);
     updateRunButton();
+  }
+
+  // SAM3 就绪判定: /api/models 的 sam3.available
+  function sam3Info() {
+    return (state.models && state.models.sam3) || null;
   }
 
   function updateRunButton() {
     var ready = !!state.file;
-    if (ready && state.mode === 'inspect') {
-      ready = !!els.categorySelect.value;
+    var hint = '';
+    if (state.mode === 'inspect') {
+      ready = ready && !!els.categorySelect.value;
+    } else if (state.mode === 'segment') {
+      var sam3 = sam3Info();
+      if (!sam3 || !sam3.available) {
+        ready = false;
+        hint = (sam3 && sam3.message) || 'SAM3 模型未就绪';
+      } else if (!els.promptInput.value.trim()) {
+        ready = false;
+        hint = '请输入文本提示, 例如 bottle,broken';
+      }
     }
     els.runBtn.disabled = !ready;
-    els.runBtn.textContent = state.mode === 'inspect' ? '开始瑕疵检测' : '开始目标检测';
+    els.runBtn.textContent = state.mode === 'inspect' ? '开始瑕疵检测'
+      : state.mode === 'segment' ? '开始文本分割'
+      : '开始目标检测';
+    if (state.mode === 'segment' && hint) { setStatus(hint, 'error'); }
   }
 
   // ------------------------------------------------------------------
@@ -179,6 +242,8 @@
       setVerdict('等待检测', 'idle');
       els.metaBox.textContent = '';
       els.viewRow.classList.add('hidden');
+      els.maskRow.classList.add('hidden');
+      els.maskRow.innerHTML = '';
       els.emptyHint.style.display = 'none';
       loadImage(state.dataURL).then(drawImageFit).catch(function () {});
       updateRunButton();
@@ -189,6 +254,12 @@
   // ------------------------------------------------------------------
   // 推理
   // ------------------------------------------------------------------
+  // /api/detect /api/inspect 的耗时在顶层; /api/segment 的耗时在 result 内
+  function resultMs(json) {
+    if (json.inference_ms != null) { return json.inference_ms; }
+    return (json.result && json.result.inference_ms) != null ? json.result.inference_ms : '-';
+  }
+
   function run() {
     if (!state.file) { return; }
     els.runBtn.disabled = true;
@@ -201,6 +272,10 @@
     if (state.mode === 'detect') {
       fd.append('conf', els.confSlider.value);
       url = '/api/detect';
+    } else if (state.mode === 'segment') {
+      fd.append('text', els.promptInput.value.trim());
+      fd.append('threshold', els.segThresholdSlider.value);
+      url = '/api/segment';
     } else {
       fd.append('category', els.categorySelect.value);
       fd.append('threshold', els.threshSlider.value);
@@ -223,10 +298,12 @@
         state.lastResult = json;
         if (state.mode === 'detect') {
           renderDetect(json);
+        } else if (state.mode === 'segment') {
+          renderSegment(json, false);
         } else {
           renderInspect(json);
         }
-        setStatus('完成, 耗时 ' + json.inference_ms + ' ms', 'ok');
+        setStatus('完成, 耗时 ' + resultMs(json) + ' ms', 'ok');
       })
       .catch(function (err) {
         setStatus('请求失败: ' + err.message, 'error');
@@ -307,6 +384,103 @@
         thumb: makeThumb(),
         detail: '阈值 ' + json.threshold + ' · ' + json.inference_ms + ' ms',
       });
+    });
+  }
+
+  // 文本分割: mask / overlay 叠加图 + 实例清单
+  function renderMaskChips(instances) {
+    els.maskRow.innerHTML = '';
+
+    var label = document.createElement('span');
+    label.className = 'mask-label';
+    label.textContent = '实例';
+    els.maskRow.appendChild(label);
+
+    if (!instances || instances.length === 0) {
+      var none = document.createElement('span');
+      none.className = 'mask-empty';
+      none.textContent = '未检出实例';
+      els.maskRow.appendChild(none);
+      return;
+    }
+
+    instances.forEach(function (it, i) {
+      var chip = document.createElement('span');
+      chip.className = 'mask-chip';
+      chip.title =
+        '实例 #' + (i + 1) +
+        ' · 分数 ' + Number(it.score).toFixed(3) +
+        (it.box ? ' · box ' + it.box.join(', ') : '') +
+        (it.area_px != null ? ' · 面积 ' + it.area_px + ' px' : '') +
+        (it.area_ratio != null ? ' (' + Math.round(it.area_ratio * 100) + '%)' : '');
+
+      var idx = document.createElement('span');
+      idx.className = 'idx';
+      idx.textContent = '#' + (i + 1);
+
+      var name = document.createElement('span');
+      name.className = 'name';
+      name.textContent = it.concept || '-';   // 服务端字符串走 textContent
+
+      var score = document.createElement('span');
+      score.className = 'score';
+      score.textContent = Number(it.score).toFixed(3);
+
+      chip.appendChild(idx);
+      chip.appendChild(name);
+      chip.appendChild(score);
+
+      if (it.area_ratio != null) {
+        var area = document.createElement('span');
+        area.className = 'area';
+        area.textContent = Math.round(it.area_ratio * 100) + '%';
+        chip.appendChild(area);
+      }
+      els.maskRow.appendChild(chip);
+    });
+  }
+
+  function renderSegment(json, viewOnly) {
+    var result = json.result || {};
+    var instances = result.instances || [];
+    var concepts = result.concepts || [];
+    var best = 0;
+    instances.forEach(function (it) { if (it.score > best) { best = it.score; } });
+
+    els.viewRow.classList.remove('hidden');
+    els.maskRow.classList.remove('hidden');
+    renderMaskChips(instances);
+
+    var b64 = checkedView() === 'mask' ? result.mask_png_base64 : result.overlay_png_base64;
+    if (!b64) { b64 = result.overlay_png_base64 || result.mask_png_base64; }
+    if (!b64) {
+      setStatus('返回结果缺少 mask/overlay 图像', 'error');
+      return;
+    }
+
+    loadImage('data:image/png;base64,' + b64).then(function (img) {
+      drawImageFit(img);
+      els.emptyHint.style.display = 'none';
+
+      var n = instances.length;
+      setVerdict(n + ' 个实例', 'info');
+      els.metaBox.textContent =
+        '概念: ' + (concepts.length ? concepts.join(',') : '-') +
+        ' · 最高分 ' + (n ? best.toFixed(3) : '-') +
+        ' · 耗时 ' + result.inference_ms + ' ms';
+
+      if (viewOnly) { return; }   // 切视图重绘不重复写历史
+      pushHistory({
+        mode: 'segment',
+        file: state.file ? state.file.name : '',
+        verdict: 'info',
+        verdictText: n + ' 个实例',
+        thumb: makeThumb(),
+        detail: '概念 ' + (concepts.length ? concepts.join(',') : '-') +
+          ' · 最高分 ' + (n ? best.toFixed(3) : '-') + ' · ' + result.inference_ms + ' ms',
+      });
+    }).catch(function () {
+      setStatus('分割结果图像解码失败', 'error');
     });
   }
 
@@ -402,7 +576,9 @@
   });
   document.querySelectorAll('input[name="view"]').forEach(function (radio) {
     radio.addEventListener('change', function () {
-      if (state.lastResult && state.mode === 'inspect') { renderInspect(state.lastResult); }
+      if (!state.lastResult) { return; }
+      if (state.mode === 'inspect') { renderInspect(state.lastResult); }
+      else if (state.mode === 'segment') { renderSegment(state.lastResult, true); }
     });
   });
   els.categorySelect.addEventListener('change', updateRunButton);
@@ -413,6 +589,10 @@
   els.threshSlider.addEventListener('input', function () {
     els.threshVal.textContent = Number(els.threshSlider.value).toFixed(2);
   });
+  els.segThresholdSlider.addEventListener('input', function () {
+    els.segThresholdVal.textContent = Number(els.segThresholdSlider.value).toFixed(2);
+  });
+  els.promptInput.addEventListener('input', updateRunButton);
 
   els.runBtn.addEventListener('click', run);
   els.clearHistory.addEventListener('click', function () {

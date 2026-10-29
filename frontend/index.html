@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>SAM_SAG · 视觉质检上位机</title>
   <link rel="stylesheet" href="style.css" />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23080b11'/%3E%3Cpath d='M16 6l8 4.5v9L16 24l-8-4.5v-9z' fill='none' stroke='%2338d9f0' stroke-width='2'/%3E%3Ccircle cx='16' cy='15' r='3' fill='%237c8cff'/%3E%3C/svg%3E" />
 </head>
 <body>
   <div class="bg-glow" aria-hidden="true"></div>
@@ -69,11 +70,25 @@
               <i>anomalib · 异常定位与热力图</i>
             </span>
           </label>
+          <label class="radio">
+            <input type="radio" name="mode" value="segment" />
+            <span class="radio-body">
+              <b>文本分割</b>
+              <i>SAM3 · 文本提示实例分割</i>
+            </span>
+          </label>
         </div>
 
         <div id="categoryRow" class="field hidden">
           <label for="categorySelect">瑕疵类别模型</label>
           <select id="categorySelect"></select>
+        </div>
+
+        <div id="promptRow" class="field hidden">
+          <label for="promptInput">文本提示 <b>逗号分隔</b></label>
+          <input type="text" id="promptInput" class="prompt-input" value="bottle"
+                 placeholder="bottle,broken" autocomplete="off" spellcheck="false" />
+          <p class="field-hint">概念候选: bottle / screw / scratch / broken / dent</p>
         </div>
       </section>
 
@@ -86,6 +101,10 @@
         <div id="threshRow" class="field hidden">
           <label>异常阈值 <b id="threshVal">0.50</b></label>
           <input type="range" id="threshSlider" min="0.05" max="0.95" step="0.01" value="0.50" />
+        </div>
+        <div id="segThresholdRow" class="field hidden">
+          <label>实例分数阈值 <b id="segThresholdVal">0.30</b></label>
+          <input type="range" id="segThresholdSlider" class="range" min="0.05" max="0.95" step="0.01" value="0.30" />
         </div>
       </section>
 
@@ -103,10 +122,12 @@
       </div>
       <div id="viewRow" class="view-row hidden">
         <span class="view-label">视图</span>
-        <label class="radio pill"><input type="radio" name="view" value="overlay" checked /><span>叠加图</span></label>
-        <label class="radio pill"><input type="radio" name="view" value="heatmap" /><span>热力图</span></label>
-        <label class="radio pill"><input type="radio" name="view" value="original" /><span>原图</span></label>
+        <label class="radio pill view-mask hidden"><input type="radio" name="view" value="mask" /><span>掩码图</span></label>
+        <label class="radio pill view-overlay"><input type="radio" name="view" value="overlay" checked /><span>叠加图</span></label>
+        <label class="radio pill view-heatmap"><input type="radio" name="view" value="heatmap" /><span>热力图</span></label>
+        <label class="radio pill view-original"><input type="radio" name="view" value="original" /><span>原图</span></label>
       </div>
+      <div id="maskRow" class="mask-row hidden"></div>
       <div class="canvas-wrap">
         <canvas id="stage"></canvas>
         <div id="emptyHint" class="empty-hint">

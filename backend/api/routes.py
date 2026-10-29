@@ -6,6 +6,9 @@
 - POST /api/detect            → {ok, detections: [{label, confidence, box}], inference_ms}
 - POST /api/inspect           → {ok, category, score, is_ng, threshold,
                                  heatmap_png_base64, overlay_png_base64, inference_ms}
+- POST /api/segment           → {ok, result: {concepts, model, device, inference_ms,
+                                 image_size, instances[], mask_png_base64,
+                                 overlay_png_base64}}      文本提示实例分割(SAM3)
 - POST /api/train             → {ok, task_id}            启动后台训练
 - GET  /api/train/{task_id}   → {ok, task: {...}}        查询训练状态
 - GET  /api/train             → {ok, tasks: [...]}       训练任务列表
@@ -33,7 +36,7 @@ from pydantic import BaseModel, Field
 from ..core import config
 from ..core.detector import ModelNotReadyError, get_detector
 from ..core.inspector import get_inspector
-from ..core.sam3_plugin import get_sam3_plugin
+from ..core.sam3_plugin import SegmentValidationError, get_sam3_plugin
 
 router = APIRouter()
 
@@ -150,6 +153,46 @@ async def inspect(
     except ModelNotReadyError as exc:
         raise _model_not_ready(exc) from exc
     return {"ok": True, "category": category, **result}
+
+
+# ---------------------------------------------------------------------------
+# 文本提示分割(SAM3, 契约见 docs/API-sam3.md §3)
+# ---------------------------------------------------------------------------
+@router.post("/segment")
+async def segment(
+    file: UploadFile = File(...),
+    text: str = Form(""),
+    threshold: float = Form(config.SAM3_DEFAULT_THRESHOLD),
+    mask_threshold: float = Form(config.SAM3_DEFAULT_MASK_THRESHOLD),
+) -> dict:
+    """multipart 上传 + 逗号分隔概念 → 实例分割掩码/叠加图(base64 PNG)。"""
+    image = await _read_image(file)
+    concepts = [token.strip() for token in text.split(",") if token.strip()]
+    if not concepts:
+        raise ApiError(
+            400,
+            "VALIDATION_ERROR",
+            "缺少 text 概念提示(逗号分隔, 如 'bottle,broken')",
+        )
+    for name, value in (("threshold", threshold), ("mask_threshold", mask_threshold)):
+        if not (0.05 <= value <= 0.95):
+            raise ApiError(
+                400,
+                "VALIDATION_ERROR",
+                f"{name} 超出范围 [0.05, 0.95]: {value}",
+            )
+    try:
+        result = get_sam3_plugin().segment(
+            image,
+            concepts,
+            threshold=threshold,
+            mask_threshold=mask_threshold,
+        )
+    except ModelNotReadyError as exc:
+        raise _model_not_ready(exc) from exc
+    except SegmentValidationError as exc:
+        raise ApiError(400, "VALIDATION_ERROR", str(exc)) from exc
+    return {"ok": True, "result": result}
 
 
 # ---------------------------------------------------------------------------
